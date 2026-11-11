@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glass Calculator</title>
+<style>
+:root{
+  --bg1:#a5b4fc;--bg2:#f9a8d4;--bg3:#99f6e4;
+  --glass:rgba(140,150,220,.14);--key:rgba(255,255,255,.22);--key-hover:rgba(255,255,255,.4);--ring:rgba(99,102,241,.3);
+  --border:rgba(255,255,255,.65);--text:#1e1b4b;--muted:#4c4a7a;
+  --accent:rgba(99,102,241,.8);--accent-text:#fff;--shadow:rgba(60,50,120,.25);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg1:#312e81;--bg2:#831843;--bg3:#134e4a;
+    --glass:rgba(20,20,40,.35);--key:rgba(255,255,255,.1);--key-hover:rgba(255,255,255,.2);
+    --border:rgba(255,255,255,.18);--text:#f1f5f9;--muted:#a5b4fc;
+    --accent:rgba(129,140,248,.85);--accent-text:#0f172a;--shadow:rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg1:#312e81;--bg2:#831843;--bg3:#134e4a;
+  --glass:rgba(20,20,40,.35);--key:rgba(255,255,255,.1);--key-hover:rgba(255,255,255,.2);
+  --border:rgba(255,255,255,.18);--text:#f1f5f9;--muted:#a5b4fc;
+  --accent:rgba(129,140,248,.85);--accent-text:#0f172a;--shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--text);background:transparent;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+  position:relative;overflow:hidden;transition:background .4s;
+}
+.calc{
+  position:relative;z-index:1;width:100%;max-width:320px;padding:18px;border-radius:28px;
+  background:var(--glass);border:1px solid var(--border);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+  box-shadow:0 20px 50px var(--shadow),0 0 0 1px var(--ring),inset 0 1px 0 rgba(255,255,255,.5);
+}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.title{font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--muted)}
+.toggle{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--key);
+  color:var(--text);font-size:17px;cursor:pointer;display:grid;place-items:center;transition:background .2s,transform .2s;
+}
+.toggle:hover{background:var(--key-hover);transform:rotate(15deg)}
+.display{text-align:right;padding:10px 6px 14px;min-height:92px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.expr{font-size:14px;color:var(--muted);min-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.value{font-size:44px;font-weight:300;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.keys button{
+  position:relative;height:58px;border-radius:20px;border:1px solid var(--border);color:var(--text);
+  background:linear-gradient(160deg,rgba(255,255,255,.55) 0%,var(--key) 45%,rgba(255,255,255,.05) 100%);
+  font-size:20px;font-family:inherit;cursor:pointer;overflow:hidden;
+  box-shadow:0 6px 14px var(--shadow),0 0 0 1px var(--ring),inset 0 1.5px 0 rgba(255,255,255,.8),inset 0 -6px 10px rgba(255,255,255,.12);
+  -webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);
+  transition:filter .15s,transform .1s,box-shadow .15s;
+}
+.keys button::before{content:"";position:absolute;left:8%;right:8%;top:3px;height:42%;border-radius:14px 14px 40px 40px;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none}
+.keys button:hover{filter:brightness(1.12)}
+.keys button:active{transform:scale(.94);box-shadow:0 2px 6px var(--shadow),0 0 0 1px var(--ring),inset 0 2px 6px rgba(0,0,0,.15)}
+.keys .fn{color:var(--muted);font-weight:600}
+.keys .op{background:linear-gradient(160deg,rgba(255,255,255,.45) 0%,var(--accent) 50%,var(--accent) 100%);color:var(--accent-text);font-weight:600}
+.keys .op:hover{filter:brightness(1.1)}
+.keys .zero{grid-column:span 2}
+</style>
+</head>
+<body>
+<main class="calc">
+  <div class="top">
+    <span class="title">CALCULATOR</span>
+    <button class="toggle" id="toggle" aria-label="Switch light or dark mode" title="Switch light/dark">🌙</button>
+  </div>
+  <div class="display">
+    <div class="expr" id="expr"></div>
+    <div class="value" id="value">0</div>
+  </div>
+  <div class="keys" id="keys">
+    <button class="fn" data-k="AC">AC</button>
+    <button class="fn" data-k="±">±</button>
+    <button class="fn" data-k="%">%</button>
+    <button class="op" data-k="/">÷</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button class="op" data-k="*">×</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button class="op" data-k="-">−</button>
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button class="op" data-k="+">+</button>
+    <button class="zero" data-k="0">0</button>
+    <button data-k=".">.</button>
+    <button class="op" data-k="=">=</button>
+  </div>
+</main>
+<script>
+(function(){
+  var root=document.documentElement,tbtn=document.getElementById("toggle");
+  var mq=window.matchMedia("(prefers-color-scheme: dark)");
+  function isDark(){
+    var t=root.getAttribute("data-theme");
+    return t?t==="dark":mq.matches;
+  }
+  function paint(){tbtn.textContent=isDark()?"☀️":"🌙";}
+  try{var s=localStorage.getItem("calc-theme");if(s==="light"||s==="dark")root.setAttribute("data-theme",s);}catch(e){}
+  paint();
+  tbtn.addEventListener("click",function(){
+    var next=isDark()?"light":"dark";
+    root.setAttribute("data-theme",next);
+    try{localStorage.setItem("calc-theme",next);}catch(e){}
+    paint();
+  });
+  if(mq.addEventListener)mq.addEventListener("change",paint);
+
+  var cur="0",prev=null,op=null,fresh=false,exprEl=document.getElementById("expr"),valEl=document.getElementById("value");
+  var sym={"+":"+","-":"−","*":"×","/":"÷"};
+  function fmt(n){
+    if(!isFinite(n))return "Error";
+    n=parseFloat(n.toPrecision(12));
+    var s=String(n);
+    if(s.indexOf("e")>-1)return s;
+    var p=s.split(".");
+    p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,",");
+    return p.join(".");
+  }
+  function show(){
+    var v=cur==="Error"?"Error":(cur.slice(-1)==="."||/\.\d*0$/.test(cur)&&cur.indexOf(".")>-1?fmtRaw(cur):fmt(parseFloat(cur)));
+    valEl.textContent=v;
+    exprEl.textContent=(prev!==null&&op)?fmt(prev)+" "+sym[op]:"";
+    valEl.style.fontSize=v.length>12?"28px":v.length>8?"36px":"44px";
+  }
+  function fmtRaw(s){
+    var p=s.split(".");
+    p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,",");
+    return p.join(".");
+  }
+  function calc(a,b,o){
+    if(o==="+")return a+b;if(o==="-")return a-b;if(o==="*")return a*b;
+    return b===0?NaN:a/b;
+  }
+  function press(k){
+    if(cur==="Error"&&k!=="AC")k="AC";
+    if(/^\d$/.test(k)){
+      if(fresh||cur==="0"){cur=k;fresh=false;}else if(cur.replace(/[-.]/g,"").length<12)cur+=k;
+    }else if(k==="."){
+      if(fresh){cur="0.";fresh=false;}else if(cur.indexOf(".")<0)cur+=".";
+    }else if(k==="AC"){cur="0";prev=null;op=null;fresh=false;
+    }else if(k==="±"){if(cur!=="0")cur=cur[0]==="-"?cur.slice(1):"-"+cur;
+    }else if(k==="%"){cur=String(parseFloat(cur)/100);
+    }else if(k==="Backspace"){cur=cur.length>1&&!fresh?cur.slice(0,-1):"0";if(cur==="-")cur="0";
+    }else if("+-*/".indexOf(k)>-1){
+      if(op&&!fresh){var r=calc(prev,parseFloat(cur),op);if(!isFinite(r)){cur="Error";prev=null;op=null;show();return;}prev=parseFloat(r.toPrecision(12));}
+      else prev=parseFloat(cur);
+      op=k;fresh=true;cur=String(prev);
+    }else if(k==="="){
+      if(op!==null){
+        var res=calc(prev,parseFloat(cur),op);
+        exprEl.textContent=fmt(prev)+" "+sym[op]+" "+fmt(parseFloat(cur))+" =";
+        cur=isFinite(res)?String(parseFloat(res.toPrecision(12))):"Error";
+        prev=null;op=null;fresh=true;
+        valEl.textContent=cur==="Error"?"Error":fmt(parseFloat(cur));
+        return;
+      }
+    }
+    show();
+  }
+  document.getElementById("keys").addEventListener("click",function(e){
+    var b=e.target.closest("button");if(b)press(b.getAttribute("data-k"));
+  });
+  document.addEventListener("keydown",function(e){
+    var k=e.key;
+    if(/^[0-9.+\-*\/]$/.test(k)){press(k);e.preventDefault();}
+    else if(k==="Enter"||k==="="){press("=");e.preventDefault();}
+    else if(k==="Backspace")press("Backspace");
+    else if(k==="Escape"||k==="Delete")press("AC");
+    else if(k==="%")press("%");
+  });
+  show();
+})();
+</script>
+</body>
+</html>
